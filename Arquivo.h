@@ -25,8 +25,8 @@ typedef struct {
 } BuscaChaveSecundaria;
 
 typedef struct {
-    char id[TAM_ID];
-    char sigla[TAM_SIGLA];
+    char idAluno[TAM_ID];
+    char siglaDisciplina[TAM_SIGLA];
     int offset;
 } IndicePrimario;
 
@@ -46,5 +46,5 @@ typedef struct {
 int carregarRegistros(Registro** registros);
 int carregarBuscaChavePrimaria(BuscaChavePrimaria** chaves);
 int carregarBuscaChaveSecundaria(BuscaChaveSecundaria** chaves);
-
-
+void inicializarArquivo(const char* nomeArquivo);
+Registro buscaChavePrimaria(BuscaChavePrimaria chaveBusca, const char* nomeDados, const char* nomeIndicePrimario);
