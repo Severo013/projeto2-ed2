@@ -4,7 +4,10 @@
 #define TAM_DISCIPLINA 50
 #define TAM_REGISTRO 120
 
-// Structs que vão ser carregados por arquivo e manipulados em memória
+extern const char* nomeDados;
+extern const char* nomeIndicePrimario;
+extern const char* nomeIndiceSecundario;
+extern const char* nomeListaInvertida;
 
 typedef struct {
     char idAluno[TAM_ID];
@@ -30,21 +33,24 @@ typedef struct {
     int offset;
 } IndicePrimario;
 
-// Structs que vão ser gravados e manipulados em arquivo
-
 typedef struct {
-    char nome[TAM_NOME];
-    int offset_lista_invertida;
+    char nomeAluno[TAM_NOME];
+    int offsetListaInvertida;
 } IndiceSecundario;
 
 typedef struct {
-    char id[TAM_ID];
-    char sigla[TAM_SIGLA];
-    int prox_offset;
+    char idAluno[TAM_ID];
+    char siglaDisciplina[TAM_SIGLA];
+    int offset;
 } ListaInvertida;
 
+void printRegistro(Registro registro);
 int carregarRegistros(Registro** registros);
 int carregarBuscaChavePrimaria(BuscaChavePrimaria** chaves);
 int carregarBuscaChaveSecundaria(BuscaChaveSecundaria** chaves);
 void inicializarArquivo(const char* nomeArquivo);
-Registro buscaChavePrimaria(BuscaChavePrimaria chaveBusca, const char* nomeDados, const char* nomeIndicePrimario);
+void inserirRegistro(Registro registro);
+void atualizarIndicePrimario(Registro* registro, int offset);
+void atualizarIndiceSecundario(Registro registro);
+Registro buscaChavePrimaria(BuscaChavePrimaria chaveBusca);
+Registro buscaChaveSecundaria(const char* nomeBusca);

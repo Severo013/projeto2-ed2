@@ -4,6 +4,11 @@
 #include <cstring>
 #include "Arquivo.h"
 
+const char* nomeDados = "dados.bin";
+const char* nomeIndicePrimario = "indice_p.bin";
+const char* nomeIndiceSecundario = "indice_s.bin";
+const char* nomeListaInvertida = "lista_invertida.bin";
+
 #pragma region Funções Auxiliares
 
 int getTamanhoArquivo(FILE* arquivo)
@@ -25,6 +30,10 @@ Registro lerRegistro(FILE* dados, int offset)
 
 #pragma endregion
 
+void printRegistro(Registro registro) {
+	printf("Registro encontrado: %s | %s | %s | %s | %f | %f \n", registro.idAluno, registro.siglaDisciplina, registro.nomeAluno, registro.nomeDisciplina, registro.media, registro.frequencia);
+}
+
 void inicializarArquivo(const char* nomeArquivo) {
 
 	FILE* arquivo = fopen(nomeArquivo, "rb+");
@@ -39,6 +48,8 @@ void inicializarArquivo(const char* nomeArquivo) {
 	}
 	fclose(arquivo);
 }
+
+#pragma region Carregamento de Dados de Arquivos
 
 int carregarRegistros(Registro** registros) {
 
@@ -118,71 +129,169 @@ int carregarBuscaChaveSecundaria(BuscaChaveSecundaria** chaves) {
 	return numeroRegistros;
 }
 
-void inserirRegistro(Registro registro, FILE* dados, FILE* indicePrimario) {
+#pragma endregion
+
+// Função para inserir um registro no arquivo de dados
+void inserirRegistro(Registro registro) {
+
+	FILE* arquivoDados = fopen(nomeDados, "rb+");
 
 	// Escrever o registro no final do arquivo de dados
-	fseek(dados, 0, SEEK_END);
-	fwrite(&registro, sizeof(Registro), 1, dados);
-	int offset = ftell(dados);
+	fseek(arquivoDados, 0, SEEK_END);
+	fwrite(&registro, sizeof(Registro), 1, arquivoDados);
+	int offset = ftell(arquivoDados);
 
 	// Atualizar o índice primário
-	IndicePrimario indice;
-	strcpy(indice.idAluno, registro.idAluno);
-	strcpy(indice.siglaDisciplina, registro.siglaDisciplina);
-	indice.offset = offset;
+	atualizarIndicePrimario(&registro, offset);
 
-	fseek(indicePrimario, 0, SEEK_END);
-	fwrite(&indice, sizeof(IndicePrimario), 1, indicePrimario);
+	fclose(arquivoDados);
 
 	// Atualizar o índice secundário (lista invertida)
+	atualizarIndiceSecundario(registro);
+
 }
 
-Registro buscaChavePrimaria(BuscaChavePrimaria chaveBusca, const char* nomeDados, const char* nomeIndicePrimario) {
+// Função para buscar registro por chave primária (idAluno + siglaDisciplina)
+Registro buscaChavePrimaria(BuscaChavePrimaria chaveBusca) {
 
-	FILE* dados = fopen(nomeDados, "rb+");
-	FILE* indicePrimario = fopen(nomeIndicePrimario, "rb+");
+	FILE* arquivoDados = fopen(nomeDados, "rb+");
+	FILE* arquivoIndicePrimario = fopen(nomeIndicePrimario, "rb+");
 
 	IndicePrimario indice;
-	fseek(indicePrimario, 0, SEEK_SET);
+	fseek(arquivoIndicePrimario, 0, SEEK_SET);
 
 	// Busca sequencial no índice primário
-	while (fread(&indice, sizeof(IndicePrimario), 1, indicePrimario)) {
+	while (fread(&indice, sizeof(IndicePrimario), 1, arquivoIndicePrimario)) {
 		if (strcmp(indice.idAluno, chaveBusca.idAluno) == 0 && strcmp(indice.siglaDisciplina, chaveBusca.siglaDisciplina) == 0) {
-			Registro registro = lerRegistro(dados, indice.offset);
-			fclose(dados);
-			fclose(indicePrimario);
+			Registro registro = lerRegistro(arquivoDados, indice.offset);
+			fclose(arquivoDados);
+			fclose(arquivoIndicePrimario);
 			return registro;
 		}
 	}
 
-	fclose(dados);
-	fclose(indicePrimario);
+	fclose(arquivoDados);
+	fclose(arquivoIndicePrimario);
+
+	printf("Registro não encontrado.\n");
+
 	Registro vazio = { 0 };  // Retorna um registro vazio caso não seja encontrado
 	return vazio;
 }
 
 // Função para buscar registro por chave secundária (nome do aluno)
-void buscaChaveSecundaria(FILE* dados, FILE* indice_secundario, FILE* lista_invertida, const char* nome) {
+Registro buscaChaveSecundaria(const char* nomeBusca) {
+
+	FILE* arquivoDados = fopen(nomeDados, "rb+");
+	FILE* arquivoIndicePrimario = fopen(nomeIndicePrimario, "rb+");
+	FILE* arquivoIndiceSecundario = fopen(nomeIndiceSecundario, "rb+");
+	FILE* arquivoListaInvertida = fopen(nomeListaInvertida, "rb+");
+
 	IndiceSecundario indice_sec;
-	fseek(indice_secundario, 0, SEEK_SET);
+	fseek(arquivoIndiceSecundario, 0, SEEK_SET);
 
 	// Busca sequencial no índice secundário
-	while (fread(&indice_sec, sizeof(IndiceSecundario), 1, indice_secundario)) {
-		if (strcmp(indice_sec.nome, nome) == 0) {
+	while (fread(&indice_sec, sizeof(IndiceSecundario), 1, arquivoIndiceSecundario)) {
+
+		if (strcmp(indice_sec.nomeAluno, nomeBusca) == 0) {
 			// Encontrado o nome, seguir a lista invertida
-			int offset_lista = indice_sec.offset_lista_invertida;
+
+			int offset_lista = indice_sec.offsetListaInvertida;
 			ListaInvertida entrada;
-			while (offset_lista != -1) {
-				fseek(lista_invertida, offset_lista, SEEK_SET);
-				fread(&entrada, sizeof(ListaInvertida), 1, lista_invertida);
 
-				// Recuperar o registro correspondente à chave primária
-				Registro registro = buscaChavePrimaria(dados, indice_secundario, entrada.id, entrada.sigla);
-				printf("ID: %s, Sigla: %s, Nome: %s\n", registro.idAluno, registro.siglaDisciplina, registro.nomeAluno);
+			fseek(arquivoListaInvertida, offset_lista, SEEK_SET);
+			fread(&entrada, sizeof(ListaInvertida), 1, arquivoListaInvertida);
 
-				// Seguir para o próximo na lista invertida
-				offset_lista = entrada.prox_offset;
-			}
+			// Recuperar o registro correspondente à chave primária
+			BuscaChavePrimaria chavePrimaria;
+			strcpy(chavePrimaria.idAluno, entrada.idAluno);
+			strcpy(chavePrimaria.siglaDisciplina, entrada.siglaDisciplina);
+			Registro registro = buscaChavePrimaria(chavePrimaria);
+
+			fclose(arquivoDados);
+			fclose(arquivoIndicePrimario);
+			fclose(arquivoIndiceSecundario);
+			fclose(arquivoListaInvertida);
+
+			return registro;
 		}
 	}
+
+	fclose(arquivoDados);
+	fclose(arquivoIndicePrimario);
+	fclose(arquivoIndiceSecundario);
+	fclose(arquivoListaInvertida);
+
+	printf("Registro não encontrado.\n");
+
+	Registro vazio = { 0 };  // Retorna um registro vazio caso não seja encontrado
+	return vazio;
+}
+
+// Função para atualizar o índice primário com um novo registro
+void atualizarIndicePrimario(Registro* registro, int offset)
+{
+	FILE* arquivoIndicePrimario = fopen(nomeIndicePrimario, "rb+");
+
+	if (!arquivoIndicePrimario) {
+		printf("Erro ao abrir arquivo de índice primário!\n");
+		return;
+	}
+
+	IndicePrimario indice;
+	strcpy(indice.idAluno, registro->idAluno);
+	strcpy(indice.siglaDisciplina, registro->siglaDisciplina);
+	indice.offset = offset;
+
+	fseek(arquivoIndicePrimario, 0, SEEK_END);
+	fwrite(&indice, sizeof(IndicePrimario), 1, arquivoIndicePrimario);
+
+	fclose(arquivoIndicePrimario);
+}
+
+// Função para atualizar o índice secundário com um novo registro
+void atualizarIndiceSecundario(Registro registro) {
+
+	FILE* arquivoIndiceSecundario = fopen(nomeIndiceSecundario, "rb+");
+	FILE* arquivoListaInvertida = fopen(nomeListaInvertida, "rb+");
+
+	if (!arquivoIndiceSecundario || !arquivoListaInvertida) {
+		printf("Erro ao abrir arquivos de índice secundário!\n");
+		return;
+	}
+
+	IndiceSecundario indiceSec;
+	long offsetUltimo = -1;
+
+	// Procurar pelo nome do aluno no índice secundário
+	fseek(arquivoIndiceSecundario, 0, SEEK_SET);
+	while (fread(&indiceSec, sizeof(IndiceSecundario), 1, arquivoIndiceSecundario)) {
+		if (strcmp(indiceSec.nomeAluno, registro.nomeAluno) == 0) {
+			break;
+		}
+		offsetUltimo = ftell(arquivoIndiceSecundario) - sizeof(IndiceSecundario);
+	}
+
+	long offsetNovoRegistro = ftell(arquivoListaInvertida);  // Offset para o novo registro na lista invertida
+
+	// Adicionar novo nome ao índice secundário e criar a lista invertida
+	IndiceSecundario novoIndiceSecundario;
+	strcpy(novoIndiceSecundario.nomeAluno, registro.nomeAluno);
+	novoIndiceSecundario.offsetListaInvertida = offsetNovoRegistro;
+
+	// Inserir novo nome no índice secundário
+	fseek(arquivoIndiceSecundario, 0, SEEK_END);
+	fwrite(&novoIndiceSecundario, sizeof(IndiceSecundario), 1, arquivoIndiceSecundario);
+
+	// Criar a primeira entrada da lista invertida para esse nome
+	ListaInvertida novoElemento;
+	strcpy(novoElemento.idAluno, registro.idAluno);
+	strcpy(novoElemento.siglaDisciplina, registro.siglaDisciplina);
+	novoElemento.offset = -1;  // Fim da lista
+
+	fseek(arquivoListaInvertida, 0, SEEK_END);
+	fwrite(&novoElemento, sizeof(ListaInvertida), 1, arquivoListaInvertida);
+
+	fclose(arquivoIndiceSecundario);
+	fclose(arquivoListaInvertida);
 }

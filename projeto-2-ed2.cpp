@@ -6,11 +6,15 @@
 
 int main() {
 
-	const char* nomeArquivoDados = "dados.bin";
-	const char* nomeArquivoIndice = "indice.bin";
+	const char* nomeDados = "dados.bin";
+	const char* nomeIndicePrimario = "indice_p.bin";
+	const char* nomeIndiceSecundario = "indice_s.bin";
+	const char* nomeListaInvertida = "lista_invertida.bin";
 
-	inicializarArquivo(nomeArquivoDados);
-	inicializarArquivo(nomeArquivoIndice);
+	inicializarArquivo(nomeDados);
+	inicializarArquivo(nomeIndicePrimario);
+	inicializarArquivo(nomeIndiceSecundario);
+	inicializarArquivo(nomeListaInvertida);
 
 	Registro* vetorInsercoes;
 	int numeroRegistros = carregarRegistros(&vetorInsercoes);
@@ -18,34 +22,30 @@ int main() {
 	BuscaChavePrimaria* vetorChavesPrimarias;
 	int numeroChavesPrimarias = carregarBuscaChavePrimaria(&vetorChavesPrimarias);
 
+	BuscaChaveSecundaria* vetorChavesSecundarias;
+	int numeroChavesSecundarias = carregarBuscaChaveSecundaria(&vetorChavesSecundarias);
 
-	//FILE* indice_secundario = fopen("indice_secundario_nome.bin", "rb+");
-	//FILE* lista_invertida = fopen("lista_invertida.bin", "rb+");
-
-	//if (!dados || !indice_primario || !indice_secundario || !lista_invertida) {
-	//    printf("Erro ao abrir arquivos!\n");
-	//    return 1;
-	//}
-
-	//// Exemplo de uso: Inserir um novo registro
-	//Registro novo_registro = { "001", "ED2", "Joao Silva", "Estruturas de Dados", 8.5, 80.0 };
-	//inserir_registro(dados, indice_primario, indice_secundario, novo_registro);
-
-	// Exemplo de uso: Buscar por chave primária
-
-	Registro resultado = buscaChavePrimaria(vetorChavesPrimarias[1], nomeArquivoDados, nomeArquivoIndice);
-	if (strlen(resultado.idAluno) > 0) {
-		printf("Registro encontrado: %s %s\n", resultado.idAluno, resultado.nomeAluno);
-	}
-	else {
-		printf("Registro não encontrado.\n");
+	for (int i = 0; i < numeroRegistros; i++) {
+		inserirRegistro(vetorInsercoes[i]);
 	}
 
-	//// Fechar arquivos
-	//fclose(dados);
-	//fclose(indice_primario);
-	//fclose(indice_secundario);
-	//fclose(lista_invertida);
+	for (int i = 0; i < numeroChavesPrimarias; i++) {
 
-	//return 0;
+		Registro resultado = buscaChavePrimaria(vetorChavesPrimarias[i]);
+		if (strlen(resultado.idAluno) > 0)
+		{
+			printRegistro(resultado);
+		}
+	}
+
+	for (int i = 0; i < numeroChavesSecundarias; i++) {
+
+		Registro resultado = buscaChaveSecundaria(vetorChavesSecundarias[i].nomeAluno);
+		if (strlen(resultado.idAluno) > 0)
+		{
+			printRegistro(resultado);
+		}
+	}
+
+	return 0;
 }
