@@ -11,6 +11,11 @@ const char* nomeListaInvertida = "lista_invertida.bin";
 
 #pragma region Funções Auxiliares
 
+Registro nullRegistro() {
+    Registro registro = { 0 };
+    return registro;
+}
+
 int getTamanhoArquivo(FILE* arquivo)
 {
 	fseek(arquivo, 0, SEEK_END);
@@ -31,7 +36,7 @@ Registro lerRegistro(FILE* dados, int offset)
 #pragma endregion
 
 void printRegistro(Registro registro) {
-	printf("Registro encontrado: %s | %s | %s | %s | %f | %f \n", registro.idAluno, registro.siglaDisciplina, registro.nomeAluno, registro.nomeDisciplina, registro.media, registro.frequencia);
+	printf("%s | %s | %s | %s | %f | %f \n", registro.idAluno, registro.siglaDisciplina, registro.nomeAluno, registro.nomeDisciplina, registro.media, registro.frequencia);
 }
 
 void inicializarArquivo(const char* nomeArquivo) {
@@ -149,6 +154,7 @@ void inserirRegistro(Registro registro) {
 	// Atualizar o índice secundário (lista invertida)
 	atualizarIndiceSecundario(registro);
 
+	printf("Registro inserido com sucesso.\n");
 }
 
 // Função para buscar registro por chave primária (idAluno + siglaDisciplina)
@@ -175,8 +181,7 @@ Registro buscaChavePrimaria(BuscaChavePrimaria chaveBusca) {
 
 	printf("Registro não encontrado.\n");
 
-	Registro vazio = { 0 };  // Retorna um registro vazio caso não seja encontrado
-	return vazio;
+    return nullRegistro();
 }
 
 // Função para buscar registro por chave secundária (nome do aluno)
@@ -224,8 +229,7 @@ Registro buscaChaveSecundaria(const char* nomeBusca) {
 
 	printf("Registro não encontrado.\n");
 
-	Registro vazio = { 0 };  // Retorna um registro vazio caso não seja encontrado
-	return vazio;
+	return nullRegistro();
 }
 
 // Função para atualizar o índice primário com um novo registro
